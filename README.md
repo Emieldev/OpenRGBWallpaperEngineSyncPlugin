@@ -15,7 +15,7 @@ A high-performance companion plugin for **OpenRGB** that synchronizes your PC ca
 | :--- | :--- |
 | **OpenRGB** | **v0.9, v1.0, and 1.0 Release Builds** (Plugin API Version 5) |
 | **Wallpaper Engine** | **v2.0+ via Steam** (iCUE & Chroma SDK plugin enabled) |
-| **Platforms** | **Windows** (x64) &bull; **Linux** (x86_64, arm64, armhf) |
+| **Platforms** | **Windows** (x64) &bull; **Linux** (x86_64) |
 | **Chroma Runtime** | [Standalone ZIP](https://github.com/Emieldev/OpenRGBWallpaperEngineSyncPlugin/releases/latest/download/razer-chroma-runtime-standalone.zip) (No Razer software/hardware required) or [Official Installer](https://rzr.to/chroma-download) |
 
 > [!IMPORTANT]
