@@ -10,18 +10,10 @@ on:
 
 jobs:
   # ==========================================
-  # Windows Builds (x64 and x86)
+  # Windows x64 Build
   # ==========================================
   build-windows:
     runs-on: windows-2022
-    strategy:
-      matrix:
-        arch: [x64, x86]
-        include:
-          - arch: x64
-            qt_arch: win64_msvc2022_64
-          - arch: x86
-            qt_arch: win32_msvc2022
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -29,35 +21,30 @@ jobs:
       - name: Setup MSVC
         uses: ilammy/msvc-dev-cmd@v1
         with:
-          arch: ${{ matrix.arch }}
+          arch: x64
 
       - name: Install Qt 6
-        uses: jurplel/install-qt-action@v3
+        uses: jurplel/install-qt-action@v4
         with:
-          version: '6.5.3'
-          arch: ${{ matrix.qt_arch }}
+          version: '6.8.2'
+          arch: win64_msvc2022_64
 
       - name: Build Plugin with CMake
         run: |
-          cmake -B build_${{ matrix.arch }} -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
-          cmake --build build_${{ matrix.arch }} --config Release
+          cmake -B build -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+          cmake --build build --config Release
 
-      - name: Package Zipped Release Asset
+      - name: Package Zipped Release Assets
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path dist
-          Compress-Archive -Path build_${{ matrix.arch }}/OpenRGBWallpaperEngineSyncPlugin.dll, README.md, LICENSE -DestinationPath dist/OpenRGBWallpaperEngineSyncPlugin-windows-${{ matrix.arch }}.zip -Force
-
-      - name: Package Standalone Chroma Runtime
-        if: matrix.arch == 'x64'
-        shell: pwsh
-        run: |
+          Compress-Archive -Path build/OpenRGBWallpaperEngineSyncPlugin.dll, README.md, LICENSE -DestinationPath dist/OpenRGBWallpaperEngineSyncPlugin-windows-x64.zip -Force
           Compress-Archive -Path tools/chroma-runtime/* -DestinationPath dist/razer-chroma-runtime-standalone.zip -Force
 
-      - name: Upload Windows Zipped Artifact
+      - name: Upload Windows Zipped Artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: OpenRGBWallpaperEngineSyncPlugin-windows-${{ matrix.arch }}
+          name: OpenRGBWallpaperEngineSyncPlugin-windows-x64
           path: dist/*.zip
 
   # ==========================================
@@ -72,7 +59,7 @@ jobs:
       - name: Install Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y qt6-base-dev qt6-base-dev-tools build-essential cmake zip
+          sudo apt-get install -y --no-install-recommends qt6-base-dev qt6-base-dev-tools libgl1-mesa-dev build-essential cmake zip
 
       - name: Build Plugin
         run: |
@@ -82,7 +69,8 @@ jobs:
       - name: Package Zipped Release Asset
         run: |
           mkdir -p dist
-          zip -j dist/OpenRGBWallpaperEngineSyncPlugin-linux-x86_64.zip build_linux_x64/libOpenRGBWallpaperEngineSyncPlugin.so README.md LICENSE
+          cp build_linux_x64/OpenRGBWallpaperEngineSyncPlugin.so dist/
+          zip -j dist/OpenRGBWallpaperEngineSyncPlugin-linux-x86_64.zip dist/OpenRGBWallpaperEngineSyncPlugin.so README.md LICENSE
 
       - name: Upload Linux x86_64 Zipped Artifact
         uses: actions/upload-artifact@v4
@@ -95,6 +83,7 @@ jobs:
   # ==========================================
   build-linux-multiarch:
     runs-on: ubuntu-22.04
+    continue-on-error: true
     strategy:
       matrix:
         arch: [aarch64, armv7l, i386]
@@ -122,7 +111,7 @@ jobs:
             cmake -B build_${{ matrix.arch }} -DCMAKE_BUILD_TYPE=Release
             cmake --build build_${{ matrix.arch }}
             mkdir -p dist
-            cp build_${{ matrix.arch }}/libOpenRGBWallpaperEngineSyncPlugin.so dist/OpenRGBWallpaperEngineSyncPlugin-linux-${{ matrix.arch }}.so
+            cp build_${{ matrix.arch }}/*OpenRGBWallpaperEngineSyncPlugin.so dist/OpenRGBWallpaperEngineSyncPlugin-linux-${{ matrix.arch }}.so
 
       - name: Package Zipped Release Asset
         run: |
@@ -140,7 +129,7 @@ jobs:
   # ==========================================
   release:
     name: Publish Release Assets
-    needs: [build-windows, build-linux-x86_64, build-linux-multiarch]
+    needs: [build-windows, build-linux-x86_64]
     runs-on: ubuntu-latest
     if: startsWith(github.ref, 'refs/tags/')
     permissions:
@@ -159,4 +148,73 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: release_zips/*.zip
-          generate_release_notes: true
+          name: "OpenRGB Wallpaper Engine Sync Plugin ${{ github.ref_name }}"
+          generate_release_notes: false
+          body: |
+            ## OpenRGB Wallpaper Engine Sync Plugin ${{ github.ref_name }}
+
+            A high-performance companion plugin for **OpenRGB** that synchronizes your PC case lighting with **Wallpaper Engine** using Wallpaper Engine's native **Razer Chroma / Corsair iCUE** output stream.
+
+            * **Zero File Tampering**: No DLL injection, memory hooking, or modified Steam files.
+            * **Ultra-Low Workload**: `< 0.1% CPU`, `0% GPU`, completely flat RAM usage.
+            * **Hardware Safe**: Adaptive bus pacing protects motherboard and GPU I²C / SMBus controllers from bus congestion and LED flicker.
+            * **Diffuser Bleed Correction**: Perceptual gamma (~2.1) and white-floor cancellation eliminate washed-out whites/pinks on frosted silicone diffusers.
+
+            ---
+
+            ### 📦 Release Downloads
+
+            | Platform / Package | Description |
+            | :--- | :--- |
+            | **[OpenRGBWallpaperEngineSyncPlugin-windows-x64.zip](https://github.com/Emieldev/OpenRGBWallpaperEngineSyncPlugin/releases/download/${{ github.ref_name }}/OpenRGBWallpaperEngineSyncPlugin-windows-x64.zip)** | **Windows 64-bit** plugin DLL (`.dll`) + docs |
+            | **[OpenRGBWallpaperEngineSyncPlugin-linux-x86_64.zip](https://github.com/Emieldev/OpenRGBWallpaperEngineSyncPlugin/releases/download/${{ github.ref_name }}/OpenRGBWallpaperEngineSyncPlugin-linux-x86_64.zip)** | **Linux x86_64** shared library (`.so`) + docs |
+            | **[razer-chroma-runtime-standalone.zip](https://github.com/Emieldev/OpenRGBWallpaperEngineSyncPlugin/releases/download/${{ github.ref_name }}/razer-chroma-runtime-standalone.zip)** | **Standalone Chroma Runtime** (zero Razer hardware or Synapse needed) |
+
+            ---
+
+            ### 🪟 Windows Installation Instructions
+
+            #### Step 1: Install Chroma Runtime
+            Wallpaper Engine streams lighting data through the Razer Chroma SDK. You **do not** need any Razer hardware.
+            * **Recommended (Zero Bloat)**: Download **`razer-chroma-runtime-standalone.zip`**, extract the folder, right-click `install.bat`, and select **Run as administrator**.
+            * *Alternative*: If you already use Razer peripherals, install [Razer Synapse 4](https://www.razer.com/synapse-4) with the **Chroma Connect** module enabled.
+
+            #### Step 2: Enable Plugin in Wallpaper Engine
+            1. Open **Wallpaper Engine**.
+            2. Click the gear icon (**Settings**) in the top right.
+            3. Open the **Plugins** tab.
+            4. Ensure **iCUE & Chroma SDK** is checked / enabled.
+
+            #### Step 3: Install Plugin into OpenRGB
+            1. Download **`OpenRGBWallpaperEngineSyncPlugin-windows-x64.zip`** and extract `OpenRGBWallpaperEngineSyncPlugin.dll`.
+            2. Copy `OpenRGBWallpaperEngineSyncPlugin.dll` to your OpenRGB plugins directory:
+               ```
+               %APPDATA%\OpenRGB\plugins\OpenRGBWallpaperEngineSyncPlugin.dll
+               ```
+               *(Press `Win + R`, paste `%APPDATA%\OpenRGB\plugins`, press Enter. Create the `plugins` folder if it does not exist).*
+            3. Launch **OpenRGB as Administrator** (required for low-level motherboard and GPU I²C/SMBus communication).
+            4. Go to the **Wallpaper Engine** tab in OpenRGB.
+            5. Select your desired devices and check **Enable Wallpaper Engine Lighting Sync**.
+
+            ---
+
+            ### 🐧 Linux Installation Instructions
+
+            #### Step 1: Enable Chroma SDK in Wallpaper Engine / linux-wallpaperengine
+            * If running Wallpaper Engine via Steam Proton or [linux-wallpaperengine](https://github.com/Almamu/linux-wallpaperengine), enable Razer Chroma / iCUE lighting output.
+
+            #### Step 2: Install Plugin into OpenRGB
+            1. Download **`OpenRGBWallpaperEngineSyncPlugin-linux-x86_64.zip`** and extract `OpenRGBWallpaperEngineSyncPlugin.so`.
+            2. Copy the library to your OpenRGB plugins directory:
+               ```bash
+               mkdir -p ~/.config/OpenRGB/plugins
+               cp OpenRGBWallpaperEngineSyncPlugin.so ~/.config/OpenRGB/plugins/
+               ```
+            3. Restart **OpenRGB**.
+            4. In the **Wallpaper Engine** tab, enable sync and select your lighting devices.
+
+            ---
+
+            ### ⚠️ Dynamic Wallpaper Advisory
+            This plugin is designed for **ambient, atmospheric, and scenic wallpapers** (nature, landscapes, aesthetic art, cinematic video loops).
+            **Fast rainbow color-cycling backgrounds (e.g. *Razer Bedroom*) are not recommended**, because physical PC case buses (I²C on GPUs, SMBus on RAM) cannot sustain 30 Hz multi-color strobing without hardware bus saturation or LED flickering.

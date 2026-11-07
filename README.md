@@ -28,7 +28,7 @@ A high-performance companion plugin for **OpenRGB** that synchronizes your PC ca
 ### 1. Install Chroma Runtime
 Wallpaper Engine emits its lighting stream through the standard Razer Chroma SDK. You **do not** need any Razer hardware or Razer Synapse installed.
 * **Recommended (Zero Bloat)**: Download **[`razer-chroma-runtime-standalone.zip`](https://github.com/Emieldev/OpenRGBWallpaperEngineSyncPlugin/releases/latest/download/razer-chroma-runtime-standalone.zip)**, extract, right-click `install.bat`, and select **Run as administrator**.
-* *Alternative*: If you already use Razer peripherals, install [Razer Synapse](https://www.razer.com/synapse-3) with the **Chroma Connect** module enabled.
+* *Alternative*: If you already use Razer peripherals, install [Razer Synapse 4](https://www.razer.com/synapse-4) with the **Chroma Connect** module enabled.
 
 ### 2. Enable Plugin in Wallpaper Engine
 In Wallpaper Engine: open **Settings** $\to$ **Plugins**, and ensure **iCUE & Chroma SDK** is checked.

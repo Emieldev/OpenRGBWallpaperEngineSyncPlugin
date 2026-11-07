@@ -6,8 +6,13 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 
 # Find Qt (Prefer Qt6, fallback to Qt5)
-find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Core Widgets Gui)
-find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Core Widgets Gui)
+find_package(Qt6 COMPONENTS Core Widgets Gui QUIET)
+if(Qt6_FOUND)
+    set(QT_VERSION_MAJOR 6)
+else()
+    find_package(Qt5 COMPONENTS Core Widgets Gui REQUIRED)
+    set(QT_VERSION_MAJOR 5)
+endif()
 
 set(PLUGIN_SOURCES
     OpenRGBWallpaperEnginePlugin.cpp
