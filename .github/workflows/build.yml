@@ -1,0 +1,162 @@
+name: Build Multi-Platform OpenRGB Plugin
+
+on:
+  push:
+    branches: [ master, main ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ master, main ]
+  workflow_dispatch:
+
+jobs:
+  # ==========================================
+  # Windows Builds (x64 and x86)
+  # ==========================================
+  build-windows:
+    runs-on: windows-2022
+    strategy:
+      matrix:
+        arch: [x64, x86]
+        include:
+          - arch: x64
+            qt_arch: win64_msvc2022_64
+          - arch: x86
+            qt_arch: win32_msvc2022
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: ${{ matrix.arch }}
+
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v3
+        with:
+          version: '6.5.3'
+          arch: ${{ matrix.qt_arch }}
+
+      - name: Build Plugin with CMake
+        run: |
+          cmake -B build_${{ matrix.arch }} -G "NMake Makefiles" -DCMAKE_BUILD_TYPE=Release
+          cmake --build build_${{ matrix.arch }} --config Release
+
+      - name: Package Zipped Release Asset
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Force -Path dist
+          Compress-Archive -Path build_${{ matrix.arch }}/OpenRGBWallpaperEngineSyncPlugin.dll, README.md, LICENSE -DestinationPath dist/OpenRGBWallpaperEngineSyncPlugin-windows-${{ matrix.arch }}.zip -Force
+
+      - name: Package Standalone Chroma Runtime
+        if: matrix.arch == 'x64'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path tools/chroma-runtime/* -DestinationPath dist/razer-chroma-runtime-standalone.zip -Force
+
+      - name: Upload Windows Zipped Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenRGBWallpaperEngineSyncPlugin-windows-${{ matrix.arch }}
+          path: dist/*.zip
+
+  # ==========================================
+  # Linux Native (amd64 / x86_64)
+  # ==========================================
+  build-linux-x86_64:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y qt6-base-dev qt6-base-dev-tools build-essential cmake zip
+
+      - name: Build Plugin
+        run: |
+          cmake -B build_linux_x64 -DCMAKE_BUILD_TYPE=Release
+          cmake --build build_linux_x64
+
+      - name: Package Zipped Release Asset
+        run: |
+          mkdir -p dist
+          zip -j dist/OpenRGBWallpaperEngineSyncPlugin-linux-x86_64.zip build_linux_x64/libOpenRGBWallpaperEngineSyncPlugin.so README.md LICENSE
+
+      - name: Upload Linux x86_64 Zipped Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenRGBWallpaperEngineSyncPlugin-linux-x86_64
+          path: dist/OpenRGBWallpaperEngineSyncPlugin-linux-x86_64.zip
+
+  # ==========================================
+  # Linux Multi-Arch (arm64, armhf, i386)
+  # ==========================================
+  build-linux-multiarch:
+    runs-on: ubuntu-22.04
+    strategy:
+      matrix:
+        arch: [aarch64, armv7l, i386]
+        include:
+          - arch: aarch64
+            distro: bullseye
+          - arch: armv7l
+            distro: bullseye
+          - arch: i386
+            distro: bullseye
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Run build in multi-arch container
+        uses: uraimo/run-on-arch-action@v2
+        with:
+          arch: ${{ matrix.arch }}
+          distro: ${{ matrix.distro }}
+          githubToken: ${{ github.token }}
+          install: |
+            apt-get update -q -y
+            apt-get install -q -y build-essential cmake qtbase5-dev qtbase5-dev-tools
+          run: |
+            cmake -B build_${{ matrix.arch }} -DCMAKE_BUILD_TYPE=Release
+            cmake --build build_${{ matrix.arch }}
+            mkdir -p dist
+            cp build_${{ matrix.arch }}/libOpenRGBWallpaperEngineSyncPlugin.so dist/OpenRGBWallpaperEngineSyncPlugin-linux-${{ matrix.arch }}.so
+
+      - name: Package Zipped Release Asset
+        run: |
+          sudo apt-get update && sudo apt-get install -y zip
+          zip -j dist/OpenRGBWallpaperEngineSyncPlugin-linux-${{ matrix.arch }}.zip dist/OpenRGBWallpaperEngineSyncPlugin-linux-${{ matrix.arch }}.so README.md LICENSE
+
+      - name: Upload Multi-Arch Zipped Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: OpenRGBWallpaperEngineSyncPlugin-linux-${{ matrix.arch }}
+          path: dist/OpenRGBWallpaperEngineSyncPlugin-linux-${{ matrix.arch }}.zip
+
+  # ==========================================
+  # Publish GitHub Release with Zipped Assets
+  # ==========================================
+  release:
+    name: Publish Release Assets
+    needs: [build-windows, build-linux-x86_64, build-linux-multiarch]
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+    permissions:
+      contents: write
+    steps:
+      - name: Download all zipped artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: release_zips
+          merge-multiple: true
+
+      - name: List Release Assets
+        run: ls -la release_zips/
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: release_zips/*.zip
+          generate_release_notes: true

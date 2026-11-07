@@ -1,0 +1,71 @@
+name: Check and Update Razer Chroma Runtime
+
+on:
+  schedule:
+    # Run every Sunday at 00:00 UTC
+    - cron: '0 0 * * 0'
+  workflow_dispatch:
+    inputs:
+      force_update:
+        description: 'Force re-download and verification of Chroma runtime installer'
+        required: false
+        default: false
+        type: boolean
+
+jobs:
+  check-chroma-runtime:
+    name: Check & Sync Razer Chroma Runtime
+    runs-on: windows-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run Chroma Runtime Sync Script
+        shell: pwsh
+        env:
+          FORCE_CHROMA_UPDATE: ${{ github.event.inputs.force_update && '1' || '0' }}
+        run: |
+          python tools/chroma-runtime/sync_runtime.py
+
+      - name: Check for Changes
+        id: git-diff
+        shell: pwsh
+        run: |
+          $diff = git status --porcelain tools/chroma-runtime
+          if ($diff) {
+            Write-Host "Chroma runtime changes detected:"
+            Write-Host $diff
+            echo "has_changes=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "No changes detected. Chroma runtime is current."
+            echo "has_changes=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Package Updated Standalone Archive
+        if: steps.git-diff.outputs.has_changes == 'true'
+        shell: pwsh
+        run: |
+          Compress-Archive -Path tools/chroma-runtime/* -DestinationPath razer-chroma-runtime-standalone.zip -Force
+
+      - name: Commit or Create Pull Request
+        if: steps.git-diff.outputs.has_changes == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: 'ci(chroma): update Razer Chroma SDK runtime binaries'
+          title: 'ci: update bundled Razer Chroma SDK runtime'
+          body: |
+            Automated sync detected an updated Razer Chroma SDK runtime from the official Razer CDN.
+            - Verified against official Razer Chroma installer (`https://dl.razerzone.com/drivers/Chroma/RazerChromaInstaller.exe`).
+            - Updated `tools/chroma-runtime/` binaries and metadata in `version.json`.
+          branch: update-chroma-runtime
+          delete-branch: true

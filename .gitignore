@@ -1,0 +1,38 @@
+# Intermediate build files
+*.obj
+*.exp
+*.lib
+*.ilk
+*.pdb
+*.idb
+moc_*.cpp
+*.old
+build/
+build_*/
+
+# Compiled binaries and release archives
+*.dll
+*.so
+*.dylib
+*.a
+*.zip
+*.tar.gz
+
+# Retain bundled runtime binaries
+!tools/chroma-runtime/**/*.dll
+
+# Proprietary Wallpaper Engine libraries
+ledextensions*.dll
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.vs/
+*.user
+*.suo
+

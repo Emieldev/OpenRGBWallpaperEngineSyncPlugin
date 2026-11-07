@@ -1,0 +1,9 @@
+{
+    "OpenRGBPluginAPIVersion": 5,
+    "Id": "org.openrgb.wallpaperenginesync",
+    "Name": "Wallpaper Engine Sync",
+    "Description": "Synchronize OpenRGB devices with Wallpaper Engine via Chroma / iCUE stream",
+    "VersionStr": "1.0.0",
+    "Commit": "1.0.0",
+    "Url": "https://github.com/Emieldev/OpenRGBWallpaperEngineSyncPlugin"
+}
