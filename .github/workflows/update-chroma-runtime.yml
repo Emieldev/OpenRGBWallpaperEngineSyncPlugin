@@ -18,11 +18,12 @@ jobs:
     runs-on: windows-latest
     permissions:
       contents: write
-      pull-requests: write
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -46,7 +47,7 @@ jobs:
             Write-Host $diff
             echo "has_changes=true" >> $env:GITHUB_OUTPUT
           } else {
-            Write-Host "No changes detected. Chroma runtime is current."
+            Write-Host "No changes detected. Bundled Razer Chroma runtime is up to date."
             echo "has_changes=false" >> $env:GITHUB_OUTPUT
           }
 
@@ -56,16 +57,12 @@ jobs:
         run: |
           Compress-Archive -Path tools/chroma-runtime/* -DestinationPath razer-chroma-runtime-standalone.zip -Force
 
-      - name: Commit or Create Pull Request
+      - name: Commit and Push Updated Runtime
         if: steps.git-diff.outputs.has_changes == 'true'
-        uses: peter-evans/create-pull-request@v6
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          commit-message: 'ci(chroma): update Razer Chroma SDK runtime binaries'
-          title: 'ci: update bundled Razer Chroma SDK runtime'
-          body: |
-            Automated sync detected an updated Razer Chroma SDK runtime from the official Razer CDN.
-            - Verified against official Razer Chroma installer (`https://dl.razerzone.com/drivers/Chroma/RazerChromaInstaller.exe`).
-            - Updated `tools/chroma-runtime/` binaries and metadata in `version.json`.
-          branch: update-chroma-runtime
-          delete-branch: true
+        shell: pwsh
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add tools/chroma-runtime/
+          git commit -m "ci(chroma): update bundled Razer Chroma SDK runtime binaries"
+          git push origin main

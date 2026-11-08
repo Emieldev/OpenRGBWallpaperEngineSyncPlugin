@@ -71,59 +71,67 @@ def main():
         with open(VERSION_JSON, "r", encoding="utf-8") as f:
             v_data = json.load(f)
 
-    v_data["last_checked"] = datetime.now(timezone.utc).isoformat()
-    v_data["remote_installer_etag"] = remote_info.get("etag")
-    v_data["remote_installer_last_modified"] = remote_info.get("last_modified")
+    prev_etag = v_data.get("remote_installer_etag")
+    prev_modified = v_data.get("remote_installer_last_modified")
 
-    # If the installer has changed compared to previously cached etag, attempt download & extraction
-    prev_etag = v_data.get("cached_etag")
-    needs_update = (prev_etag is not None and prev_etag != remote_info.get("etag"))
+    remote_etag = remote_info.get("etag")
+    remote_modified = remote_info.get("last_modified")
 
-    if needs_update or os.environ.get("FORCE_CHROMA_UPDATE") == "1":
-        print("[*] Remote installer change detected or FORCE_CHROMA_UPDATE set. Downloading...")
-        temp_installer = os.path.join(SCRIPT_DIR, "RazerChromaInstaller.exe")
-        req = urllib.request.Request(INSTALLER_URL, headers={"User-Agent": USER_AGENT})
-        with urllib.request.urlopen(req, timeout=60) as resp, open(temp_installer, "wb") as out:
-            out.write(resp.read())
-        print(f"[OK] Downloaded installer ({os.path.getsize(temp_installer)} bytes).")
+    etag_changed = (prev_etag is not None and remote_etag is not None and prev_etag != remote_etag)
+    modified_changed = (prev_modified is not None and remote_modified is not None and prev_modified != remote_modified)
 
-        # Extract using 7z if available
-        extract_dir = os.path.join(SCRIPT_DIR, "extracted_temp")
-        os.makedirs(extract_dir, exist_ok=True)
-        try:
-            subprocess.run(["7z", "x", temp_installer, f"-o{extract_dir}", "-y"], check=True)
-            # Search for RzChromaSDK64.dll and RzChromaSDK.dll
-            found_x64, found_x86 = None, None
-            for root, _, files in os.walk(extract_dir):
-                for f in files:
-                    if f.lower() == "rzchromasdk64.dll":
-                        found_x64 = os.path.join(root, f)
-                    elif f.lower() == "rzchromasdk.dll":
-                        found_x86 = os.path.join(root, f)
+    needs_update = etag_changed or modified_changed or (os.environ.get("FORCE_CHROMA_UPDATE") == "1")
 
-            if found_x64 and found_x86:
-                import shutil
-                shutil.copy2(found_x64, X64_DLL)
-                shutil.copy2(found_x86, X86_DLL)
-                v_data["x64_sha256"] = get_sha256(X64_DLL)
-                v_data["x86_sha256"] = get_sha256(X86_DLL)
-                v_data["cached_etag"] = remote_info.get("etag")
-                print(f"[OK] Successfully updated runtime DLLs! New x64 hash: {v_data['x64_sha256']}")
-        except Exception as ex:
-            print(f"[!] Extraction note: {ex}")
-        finally:
-            if os.path.exists(temp_installer):
-                try: os.remove(temp_installer)
-                except: pass
-            if os.path.exists(extract_dir):
-                import shutil
-                try: shutil.rmtree(extract_dir)
-                except: pass
-    else:
+    if not needs_update:
         print("[OK] Bundled Razer Chroma runtime DLLs are up to date.")
+        # Do not modify version.json so git status stays clean
+        return 0
 
-    with open(VERSION_JSON, "w", encoding="utf-8") as f:
-        json.dump(v_data, f, indent=2)
+    print("[*] Remote installer change detected or FORCE_CHROMA_UPDATE set. Downloading...")
+    temp_installer = os.path.join(SCRIPT_DIR, "RazerChromaInstaller.exe")
+    req = urllib.request.Request(INSTALLER_URL, headers={"User-Agent": USER_AGENT})
+    with urllib.request.urlopen(req, timeout=60) as resp, open(temp_installer, "wb") as out:
+        out.write(resp.read())
+    print(f"[OK] Downloaded installer ({os.path.getsize(temp_installer)} bytes).")
+
+    # Extract using 7z if available
+    extract_dir = os.path.join(SCRIPT_DIR, "extracted_temp")
+    os.makedirs(extract_dir, exist_ok=True)
+    try:
+        subprocess.run(["7z", "x", temp_installer, f"-o{extract_dir}", "-y"], check=True)
+        # Search for RzChromaSDK64.dll and RzChromaSDK.dll
+        found_x64, found_x86 = None, None
+        for root, _, files in os.walk(extract_dir):
+            for f in files:
+                if f.lower() == "rzchromasdk64.dll":
+                    found_x64 = os.path.join(root, f)
+                elif f.lower() == "rzchromasdk.dll":
+                    found_x86 = os.path.join(root, f)
+
+        if found_x64 and found_x86:
+            import shutil
+            shutil.copy2(found_x64, X64_DLL)
+            shutil.copy2(found_x86, X86_DLL)
+            v_data["x64_sha256"] = get_sha256(X64_DLL)
+            v_data["x86_sha256"] = get_sha256(X86_DLL)
+            v_data["remote_installer_etag"] = remote_etag
+            v_data["remote_installer_last_modified"] = remote_modified
+            v_data["last_checked"] = datetime.now(timezone.utc).isoformat()
+            with open(VERSION_JSON, "w", encoding="utf-8") as f:
+                json.dump(v_data, f, indent=2)
+            print(f"[OK] Successfully updated runtime DLLs! New x64 hash: {v_data['x64_sha256']}")
+        else:
+            print("[!] Could not locate extracted DLLs in installer archive.")
+    except Exception as ex:
+        print(f"[!] Extraction note: {ex}")
+    finally:
+        if os.path.exists(temp_installer):
+            try: os.remove(temp_installer)
+            except: pass
+        if os.path.exists(extract_dir):
+            import shutil
+            try: shutil.rmtree(extract_dir)
+            except: pass
 
     return 0
 
