@@ -475,7 +475,7 @@ OpenRGBPluginInfo OpenRGBWallpaperEnginePlugin::GetPluginInfo()
     info.Description     = "Synchronizes OpenRGB devices with Wallpaper Engine via Chroma / iCUE stream";
     info.Version         = "1.0.0";
     info.Commit          = "1.0.0";
-    info.URL             = "https://github.com/Emieldev/OpenRGBWallpaperEngineSyncPlugin";
+    info.URL             = "https://github.com/Emieldev/OpenRGB-Wallpaper-Engine-Sync-Plugin";
     info.Location        = OPENRGB_PLUGIN_LOCATION_TOP;
     info.Label           = "Wallpaper Engine";
     info.TabIconString   = "";

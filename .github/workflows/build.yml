@@ -120,9 +120,9 @@ jobs:
 
             | Platform / Package | Description |
             | :--- | :--- |
-            | **[OpenRGBWallpaperEngineSyncPlugin-windows-x64.zip](https://github.com/Emieldev/OpenRGBWallpaperEngineSyncPlugin/releases/download/${{ github.ref_name }}/OpenRGBWallpaperEngineSyncPlugin-windows-x64.zip)** | **Windows 64-bit** plugin DLL (`.dll`) + docs |
-            | **[OpenRGBWallpaperEngineSyncPlugin-linux-x86_64.zip](https://github.com/Emieldev/OpenRGBWallpaperEngineSyncPlugin/releases/download/${{ github.ref_name }}/OpenRGBWallpaperEngineSyncPlugin-linux-x86_64.zip)** | **Linux x86_64** shared library (`.so`) + docs |
-            | **[razer-chroma-runtime-standalone.zip](https://github.com/Emieldev/OpenRGBWallpaperEngineSyncPlugin/releases/download/${{ github.ref_name }}/razer-chroma-runtime-standalone.zip)** | **Standalone Chroma Runtime** (zero Razer hardware or Synapse needed) |
+            | **[OpenRGBWallpaperEngineSyncPlugin-windows-x64.zip](https://github.com/Emieldev/OpenRGB-Wallpaper-Engine-Sync-Plugin/releases/download/${{ github.ref_name }}/OpenRGBWallpaperEngineSyncPlugin-windows-x64.zip)** | **Windows 64-bit** plugin DLL (`.dll`) + docs |
+            | **[OpenRGBWallpaperEngineSyncPlugin-linux-x86_64.zip](https://github.com/Emieldev/OpenRGB-Wallpaper-Engine-Sync-Plugin/releases/download/${{ github.ref_name }}/OpenRGBWallpaperEngineSyncPlugin-linux-x86_64.zip)** | **Linux x86_64** shared library (`.so`) + docs |
+            | **[razer-chroma-runtime-standalone.zip](https://github.com/Emieldev/OpenRGB-Wallpaper-Engine-Sync-Plugin/releases/download/${{ github.ref_name }}/razer-chroma-runtime-standalone.zip)** | **Standalone Chroma Runtime** (zero Razer hardware or Synapse needed) |
 
             ---
 

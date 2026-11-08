@@ -5,5 +5,5 @@
     "Description": "Synchronize OpenRGB devices with Wallpaper Engine via Chroma / iCUE stream",
     "VersionStr": "1.0.0",
     "Commit": "1.0.0",
-    "Url": "https://github.com/Emieldev/OpenRGBWallpaperEngineSyncPlugin"
+    "Url": "https://github.com/Emieldev/OpenRGB-Wallpaper-Engine-Sync-Plugin"
 }
